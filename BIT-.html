@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cryptosphere | Bitcoin Analytics</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+  <style>
+    :root {
+      --background: #121212;
+      --surface: #1e1e1e;
+      --surface-light: #2d2d2d;
+      --text-primary: #ffffff;
+      --text-secondary: #b3b3b3;
+      --accent: #ffffff;
+      --positive: #a0a0a0;
+      --negative: #505050;
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    
+    body {
+      background-color: var(--background);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    header {
+      padding: 1.5rem;
+      background-color: var(--surface);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .logo {
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+    }
+    
+    .logo span {
+      color: var(--accent);
+    }
+    
+    nav {
+      display: flex;
+      gap: 1.5rem;
+    }
+    
+    nav a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+    
+    nav a:hover {
+      color: var(--text-primary);
+    }
+    
+    nav a.active {
+      color: var(--text-primary);
+      position: relative;
+    }
+    
+    nav a.active::after {
+      content: '';
+      position: absolute;
+      bottom: -5px;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      background-color: var(--accent);
+    }
+    
+    main {
+      flex: 1;
+      padding: 2rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1.5rem;
+    }
+    
+    .card {
+      background-color: var(--surface);
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+    
+    .card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+    }
+    
+    .card h2 {
+      font-size: 1.2rem;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .card h2 svg {
+      width: 20px;
+      height: 20px;
+    }
+    
+    .crypto-price {
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+    
+    .price-change {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      font-size: 0.9rem;
+      margin-bottom: 1rem;
+    }
+    
+    .price-change.positive {
+      color: var(--positive);
+    }
+    
+    .price-change.negative {
+      color: var(--negative);
+    }
+    
+    .chart-container {
+      width: 100%;
+      height: 150px;
+      margin-top: 1rem;
+    }
+    
+    .metrics {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    
+    .metric {
+      background-color: var(--surface-light);
+      padding: 0.75rem;
+      border-radius: 8px;
+    }
+    
+    .metric-label {
+      font-size: 0.7rem;
+      color: var(--text-secondary);
+      margin-bottom: 0.25rem;
+    }
+    
+    .metric-value {
+      font-size: 1rem;
+      font-weight: 600;
+    }
+    
+    .recommendations {
+      grid-column: 1 / -1;
+    }
+    
+    .recommendation-card {
+      background-color: var(--surface);
+      padding: 1.5rem;
+      border-radius: 12px;
+      margin-bottom: 1rem;
+      border-left: 4px solid var(--positive);
+    }
+    
+    .recommendation-title {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    
+    .recommendation-title svg {
+      width: 20px;
+      height: 20px;
+    }
+    
+    .recommendation-body {
+      color: var(--text-secondary);
+      line-height: 1.5;
+      margin-bottom: 1rem;
+    }
+    
+    .recommendation-metrics {
+      display: flex;
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    
+    .recommendation-metric {
+      background-color: var(--surface-light);
+      padding: 0.5rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.8rem;
+    }
+    
+    .recommendation-metric span {
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    
+    .large-chart {
+      grid-column: 1 / -1;
+      height: 300px;
+    }
+    
+    footer {
+      padding: 1.5rem;
+      background-color: var(--surface);
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      text-align: center;
+      color: var(--text-secondary);
+      font-size: 0.8rem;
+    }
+    
+    .coin-selector {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      overflow-x: auto;
+      padding-bottom: 0.5rem;
+    }
+    
+    .coin-option {
+      background-color: var(--surface-light);
+      border: none;
+      border-radius: 8px;
+      padding: 0.5rem 1rem;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: background-color 0.2s, color 0.2s;
+      font-size: 0.9rem;
+      white-space: nowrap;
+    }
+    
+    .coin-option.active {
+      background-color: var(--accent);
+      color: var(--background);
+      font-weight: 500;
+    }
+    
+    .coin-option:not(.active):hover {
+      background-color: rgba(255, 255, 255, 0.1);
+      color: var(--text-primary);
+    }
+    
+    @media (max-width: 768px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+      
+      nav {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">Crypto<span>sphere</span></div>
+    <nav>
+      <a href="#" class="active">Dashboard</a>
+      <a href="#">Portfolio</a>
+      <a href="#">Analytics</a>
+      <a href="#">News</a>
+      <a href="#">Settings</a>
+    </nav>
+  </header>
+  
+  <main>
+    <div class="card large-chart">
+      <h2>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M21 7V17C21 20 19.5 22 16 22H8C4.5 22 3 20 3 17V7C3 4 4.5 2 8 2H16C19.5 2 21 4 21 7Z" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M15.5 2V9.85999C15.5 10.3 14.98 10.52 14.66 10.23L12.5 8.24999L10.34 10.23C10.02 10.52 9.5 10.3 9.5 9.85999V2H15.5Z" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M13.5 14H17.5" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M9 18H17.5" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Market Overview
+      </h2>
+      
+      <div class="coin-selector">
+        <button class="coin-option active">All Coins</button>
+        <button class="coin-option">Bitcoin (BTC)</button>
+        <button class="coin-option">Ethereum (ETH)</button>
+        <button class="coin-option">Solana (SOL)</button>
+        <button class="coin-option">Cardano (ADA)</button>
+        <button class="coin-option">Polkadot (DOT)</button>
+      </div>
+      
+      <canvas id="marketChart"></canvas>
+    </div>
+    
+    <div class="card">
+      <h2>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M9 22H15C20 22 22 20 22 15V9C22 4 20 2 15 2H9C4 2 2 4 2 9V15C2 20 4 22 9 22Z" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M7.5 12H16.5" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M12 16.5V7.5" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Bitcoin (BTC)
+      </h2>
+      <div class="crypto-price">$52,183.45</div>
+      <div class="price-change positive">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M8 3.33331V12.6666" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M12 7.33331L8 3.33331L4 7.33331" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        +2.34% (24h)
+      </div>
+      
+      <div class="chart-container">
+        <canvas id="btcChart"></canvas>
+      </div>
+      
+      <div class="metrics">
+        <div class="metric">
+          <div class="metric-label">MARKET CAP</div>
+          <div class="metric-value">$995.8B</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">VOLUME (24H)</div>
+          <div class="metric-value">$28.4B</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">CIRCULATING SUPPLY</div>
+          <div class="metric-value">19.08M BTC</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">MAX SUPPLY</div>
+          <div class="metric-value">21M BTC</div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="card">
+      <h2>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M6.90206 15C6.40209 15 5.90211 14.8 5.50213 14.4C5.00215 14 4.70215 13.4 4.70215 12.8C4.70215 12.2 5.00215 11.6 5.40215 11.2L16.9014 2.3C17.6014 1.7 18.7013 1.8 19.3013 2.5C19.9013 3.2 19.8014 4.3 19.1014 4.9L7.50213 13.7C7.30213 14 7.10206 15 6.90206 15Z" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M3.00189 22H21.0019" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M14.5024 15L16.5024 17" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M7.50238 15V20" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M16.5024 17V20" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M4.5 18V20" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M19.5 18V20" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Ethereum (ETH)
+      </h2>
+      <div class="crypto-price">$2,871.23</div>
+      <div class="price-change positive">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M8 3.33331V12.6666" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M12 7.33331L8 3.33331L4 7.33331" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        +1.68% (24h)
+      </div>
+      
+      <div class="chart-container">
+        <canvas id="ethChart"></canvas>
+      </div>
+      
+      <div class="metrics">
+        <div class="metric">
+          <div class="metric-label">MARKET CAP</div>
+          <div class="metric-value">$345.3B</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">VOLUME (24H)</div>
+          <div class="metric-value">$13.2B</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">CIRCULATING SUPPLY</div>
+          <div class="metric-value">120.2M ETH</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">MAX SUPPLY</div>
+          <div class="metric-value">Unlimited</div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="card">
+      <h2>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M8.67188 14.3298C8.67188 15.6198 9.66188 16.6598 10.8919 16.6598H13.4019C14.4719 16.6598 15.3419 15.7498 15.3419 14.6298C15.3419 13.4098 14.8119 12.9798 14.0219 12.6998L9.99187 11.2998C9.20187 11.0198 8.67188 10.5898 8.67188 9.36984C8.67188 8.24984 9.54187 7.33984 10.6119 7.33984H13.1219C14.3519 7.33984 15.3419 8.37984 15.3419 9.66984" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M12 6V18" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Solana (SOL)
+      </h2>
+      <div class="crypto-price">$137.85</div>
+      <div class="price-change negative">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M8 12.6667V3.33337" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M4 8.66669L8 12.6667L12 8.66669" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        -0.92% (24h)
+      </div>
+      
+      <div class="chart-container">
+        <canvas id="solChart"></canvas>
+      </div>
+      
+      <div class="metrics">
+        <div class="metric">
+          <div class="metric-label">MARKET CAP</div>
+          <div class="metric-value">$59.4B</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">VOLUME (24H)</div>
+          <div class="metric-value">$2.1B</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">CIRCULATING SUPPLY</div>
+          <div class="metric-value">431.7M SOL</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">MAX SUPPLY</div>
+          <div class="metric-value">N/A</div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="card recommendations">
+      <h2>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M19.1413 5.93994L13.0613 2.05994C12.7213 1.82994 12.2813 1.82994 11.9413 2.05994L5.86133 5.93994C4.21133 7.00994 4.21133 9.45994 5.86133 10.5399L6.88133 11.1999L11.9413 14.5399C12.2813 14.7699 12.7213 14.7699 13.0613 14.5399L18.1213 11.1999L18.4113 11.0099V13.9999C18.4113 14.5499 18.8713 14.9999 19.4113 14.9999C19.9613 14.9999 20.4113 14.5499 20.4113 13.9999V9.41994C21.0613 8.36994 20.5513 6.84994 19.1413 5.93994Z" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M5 14.9999V12.9999" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M6.80078 18.1998C8.74078 21.1998 13.2408 22.3698 17.0008 21.0998C16.9708 20.9698 16.9508 20.8298 16.9508 20.6798V18.1998" stroke="white" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Investment Recommendations
+      </h2>
+      
+      <div class="recommendation-card">
+        <div class="recommendation-title">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M10 17.5C14.1421 17.5 17.5 14.1421 17.5 10C17.5 5.85786 14.1421 2.5 10 2.5C5.85786 2.5 2.5 5.85786 2.5 10C2.5 14.1421 5.85786 17.5 10 17.5Z" stroke="white" stroke-width="1.5" stroke-miterlimit="10"/>
+            <path d="M10 6.25V10.625" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M9.99609 13.75H10.0036" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <h3>Bitcoin (BTC) - Strong Buy</h3>
+        </div>
+        <div class="recommendation-body">
+          Bitcoin is showing strong upward momentum with consistent higher lows. The recent price action suggests continued bullish sentiment, with strong institutional buying supporting the uptrend. Technical indicators point to potential further gains in the short to medium term.
+        </div>
+        <div class="recommendation-metrics">
+          <div class="recommendation-metric">Potential Upside: <span>+12.3%</span></div>
+          <div class="recommendation-metric">Risk Rating: <span>Medium</span></div>
+          <div class="recommendation-metric">Time Horizon: <span>3-6 months</span></div>
+        </div>
+      </div>
+      
+      <div class="recommendation-card">
+        <div class="recommendation-title">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M10 17.5C14.1421 17.5 17.5 14.1421 17.5 10C17.5 5.85786 14.1421 2.5 10 2.5C5.85786 2.5 2.5 5.85786 2.5 10C2.5 14.1421 5.85786 17.5 10 17.5Z" stroke="white" stroke-width="1.5" stroke-miterlimit="10"/>
+            <path d="M10 6.25V10.625" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M9.99609 13.75H10.0036" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <h3>Ethereum (ETH) - Buy</h3>
+        </div>
+        <div class="recommendation-body">
+          Ethereum has been consolidating within a tight range but shows signs of breaking out to the upside. The recent blockchain upgrade has positively impacted network efficiency, which may drive increased adoption. The risk-reward ratio at current levels appears favorable.
+        </div>
+        <div class="recommendation-metrics">
+          <div class="recommendation-metric">Potential Upside: <span>+8.5%</span></div>
+          <div class="recommendation-metric">Risk Rating: <span>Medium</span></div>
+          <div class="recommendation-metric">Time Horizon: <span>1-3 months</span></div>
+        </div>
+      </div>
+    </div>
+  </main>
+  
+  <footer>
+    © 2025 Cryptosphere | Disclaimer: All investment recommendations are based on historical data and technical analysis. Cryptocurrency investments involve risk. Always conduct your own research before investing.
+  </footer>
+
+  <script>
+    // Market Overview Chart
+    const marketCtx = document.getElementById('marketChart').getContext('2d');
+    const marketChart = new Chart(marketCtx, {
+      type: 'line',
+      data: {
+        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct'],
+        datasets: [
+          {
+            label: 'Bitcoin',
+            data: [42000, 38500, 44000, 47500, 45000, 49000, 48000, 46000, 50000, 52000],
+            borderColor: 'rgba(255, 255, 255, 0.9)',
+            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+            tension: 0.4,
+            borderWidth: 2,
+            pointRadius: 0,
+            pointHoverRadius: 4,
+          },
+          {
+            label: 'Ethereum',
+            data: [2800, 2500, 2700, 2900, 2600, 2800, 2750, 2650, 2700, 2850],
+            borderColor: 'rgba(255, 255, 255, 0.6)',
+            backgroundColor: 'rgba(255, 255, 255, 0.05)',
+            tension: 0.4,
+            borderWidth: 2,
+            pointRadius: 0,
+            pointHoverRadius: 4,
+          },
+          {
+            label: 'Solana',
+            data: [140, 110, 120, 135, 125, 150, 145, 135, 130, 138],
+            borderColor: 'rgba(255, 255, 255, 0.3)',
+            backgroundColor: 'rgba(255, 255, 255, 0.02)',
+            tension: 0.4,
+            borderWidth: 2,
+            pointRadius: 0,
+            pointHoverRadius: 4,
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'top',
+            labels: {
+              color: 'rgba(255, 255, 255, 0.7)',
+              font: {
+                size: 12
+              }
+            }
+          },
+          tooltip: {
+            mode: 'index',
+            intersect: false,
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            titleColor: '#fff',
+            bodyColor: 'rgba(255, 255, 255, 0.8)',
+            borderColor: 'rgba(255, 255, 255, 0.2)',
+            borderWidth: 1
+          }
+        },
+        scales: {
+          x: {
+            grid: {
+              color: 'rgba(255, 255, 255, 0.05)'
+            },
+            ticks: {
+              color: 'rgba(255, 255, 255, 0.6)'
+            }
+          },
+          y: {
+            grid: {
+              color: 'rgba(255, 255, 255, 0.05)'
+            },
+            ticks: {
+              color: 'rgba(255, 255, 255, 0.6)'
+            }
+          }
+        }
+      }
+    });
+    
+    // BTC Chart
+    const btcCtx = document.getElementById('btcChart').getContext('2d');
+    const btcChart = new Chart(btcCtx, {
+      type: 'line',
+      data: {
+        labels: ['', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+        datasets: [{
+          data: [49200, 49800, 50400, 49700, 50200, 51000, 50700, 51200, 51800, 51500, 52100, 51800, 52300, 52200],
+          borderColor: '#fff',
+          backgroundColor: 'rgba(255, 255, 255, 0.1)',
+          tension: 0.4,
+          fill: true,
+          borderWidth: 2,
+          pointRadius: 0,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: false
+          },
+          tooltip: {
+            enabled: false
+          }
+        },
+        scales: {
+          x: {
+            display: false
+          },
+          y: {
+            display: false
+          }
+        }
+      }
+    });
+    
+    // ETH Chart
+    const ethCtx = document.getElementById('ethChart').getContext('2d');
+    const ethChart = new Chart(ethCtx, {
+      type: 'line',
+      data: {
+        labels: ['', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+        datasets: [{
+          data: [2870, 2890, 2910, 2880, 2900, 2920, 2910, 2930, 2940, 2920, 2950, 2940, 2960, 2950],
+          borderColor: '#fff',
+          backgroundColor: 'rgba(255, 255, 255, 0.1)',
+          tension: 0.4,
+          fill: true,
+          borderWidth: 2,
+          pointRadius: 0,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: false
+          },
+          tooltip: {
+            enabled: false
+          }
+        },
+        scales: {
+          x: {
+            display: false
+          },
+          y: {
+            display: false
+          }
+        }
+      }
+    });
+  </script>
+</body>
+</html>
